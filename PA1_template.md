@@ -1,9 +1,4 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 **Maiia Bakhova**
 
@@ -12,7 +7,8 @@ output:
 The data should be in a directory, which is used for git files. Since this is individual I moved it to my working 
 directory and started from here. Downloading the data: 
 
-```{r}
+
+```r
 pr1 <- read.csv("activity.csv")
 ```
 Let us check what kind of data we have.
@@ -62,12 +58,15 @@ As we see, there at most 4 digits, and the last 2 stand for minutes (they run fr
 ## What is mean total number of steps taken per day?
 To find the value we need at first to compute the total number of steps taken daily. I will assign the value to variable "totalPerDay". In the assignment description there was a question about a histogram, so it goes next, too.
 
-```{r, fig.align='center'}
+
+```r
 totalPerDay <-  tapply(pr1$steps,  pr1$date, sum)
 hist(totalPerDay, breaks=10, col=3, 
      xlab="The mean number of steps per day", 
      main=NULL)
 ```
+
+<img src="PA1_template_files/figure-html/unnamed-chunk-2-1.png" title="" alt="" style="display: block; margin: auto;" />
 The average number of steps per day is (skipping missed values):
 
 ```r
@@ -93,7 +92,8 @@ median(totalPerDay, na.rm=T)
   We remember that our intervals are not represented as time values. It means that we need to convert them. At first I put them in separate vector and change their class to "character".
 Then we need to "fatten up" the given numbers with zeros. I will create a function "fixIn" for this. The vector "tive" will be the interval column converted into conventional time format.
 
-```{r}
+
+```r
 tve <-  as.character(unique(pr1$interval))
  fixIn <-function(x){
     k<-nchar(x)
@@ -112,11 +112,14 @@ tive = strptime (tive,  format="%H%M")
 
   Then I will create a vector of average numbers of steps and a plot of the average daily activity pattern.
 
-```{r}
+
+```r
 avPerInt = tapply(pr1$steps, pr1$interval, mean, na.rm=T)
 plot(tive, avPerInt, type = "l", 
      xlab="time of a day", ylab="Number of steps per interval")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
 And the maximum is reached at 8:45 (which is 104th entry of the vector), as it is shown below.
 
 ```r
@@ -132,19 +135,25 @@ which.max(avPerInt)
 
 At first we need to figure out missing values. Since I will need their positions later I will create a vector to mark their places. We cab compute how many of them are in the date.
 
-```{r}
+
+```r
 NAval=is.na(pr1$steps)
 sum(NAval)
 ```
+
+```
+## [1] 2304
+```
 Then I will need some values to replace the missing ones.For each missing interval value I've chosen to use the mean value for this 5-minute interval in the data. Calculating:
 
-```{r}
+
+```r
 avPerInt = tapply(pr1$steps, pr1$interval, mean, na.rm=T)
 ```
 And replacing:
 
-```{r, message=FALSE}
 
+```r
 Steps = pr1$steps
 Steps[NAval] <- avPerInt
 library(dplyr)
@@ -152,21 +161,30 @@ pr1n=mutate(pr1, steps=Steps)
 ```
 The data set "pr1n" is the same as original, but with the missed data filled in. Now computing updated total values yields:
 
-```{r}
+
+```r
 totalPerDay <-  tapply(pr1n$steps,  pr1n$date, sum)
 ```
 And the new histogram without missing values is:
 
-```{r}
+
+```r
 totalPerDay <-  tapply(pr1n$steps,  pr1n$date, sum)
 hist(totalPerDay, breaks=10, col=4, 
      xlab="The mean number of steps per day", 
      main=NULL)
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
 Now the average number of steps per day is (skipping missed values):
 
-```{r}
+
+```r
 mean(totalPerDay)
+```
+
+```
+## [1] 10766.19
 ```
 The mean did not change, since I've used mean values for each interval. The medians in the first case and in the second are different.
 
@@ -174,40 +192,53 @@ The mean did not change, since I've used mean values for each interval. The medi
 
 At first we need to form a vector to distinguish the data between weekdays and weekends.
 
-```{r}
+
+```r
 weekD= weekdays(strptime(pr1$date,  format="%Y-%m-%d"))
 wkEnd=(weekD=="Saturday" | weekD=="Sunday")
 ```
 I can make the required vector as well, but my solution does not need it.
 
-```{r}
+
+```r
 NewFactorVariable=factor(ifelse(wkEnd, "weekend","weekday"))
 ```
 Next step is partition the data:
 
-```{r}
+
+```r
 pr1WE=pr1n[wkEnd,]
 pr1WD=pr1n[!wkEnd,]
 ```
 Here are averagings across the intervals:
 
-```{r}
+
+```r
 avPerIntwe = tapply(pr1WE$steps, pr1WE$interval, mean)
 avPerIntwd = tapply(pr1WD$steps, pr1WD$interval, mean)
 ```
 Now I need to form a data frame for the last panel plot.
 
-```{r}
+
+```r
 busidays=data.frame(time=tive, steps=avPerIntwd, weekday="businessday" )
 weekends=data.frame(time=tive, steps=avPerIntwe, weekday="weekend" )
 lastDF=bind_rows(busidays,weekends)
 ```
+
+```
+## Warning in rbind_all(list(x, ...)): Unequal factor levels: coercing to
+## character
+```
 And here is the panel plot:
 
-```{r}
+
+```r
 library(ggplot2)
 qplot(time, steps, data=lastDF, facets=weekday~., geom="line")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-16-1.png) 
 
 As we see in both cases there is almost no movement between 24:00 and 5:00, and there is a notable surge in activity between 8:00 and 9:30. But most of the time the activity patterns are different for weekends and business days: on average during a business day moving activity is more structured, with clear increases at waking up, getting to work, lunch time, going home and dinner time. (As you see, I could not remove the particular date. My computer assumed that it should be the day at which I've edited the file. Any advice on it will be appreciated, too.)
 
